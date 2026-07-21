@@ -1,55 +1,26 @@
 import streamlit as st
-from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel
-from typing import List, Optional
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_groq import ChatGroq
+from core import extract_movie_info
 
-load_dotenv(override=True)
+st.set_page_config(page_title="Movie Info Extractor")
 
-model = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0
+st.title("🎬 Movie Info Extractor")
+
+paragraph = st.text_area(
+    "Enter Movie Paragraph",
+    height=250
 )
 
-
-class Movie(BaseModel):
-    title: str
-    release_year: Optional[int]
-    genre: List[str]
-    director: Optional[str]
-    cast: List[str]
-    rating: Optional[float]
-    summary: str
-
-
-parser = PydanticOutputParser(pydantic_object=Movie)
-
-prompt = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        """
-Extract movie information from the paragraph.
-
-{format_instructions}
-"""
-    ),
-    ("human", "{paragraph}")
-])
-
-st.title("Movie Info Extractor")
-
-para = st.text_area("Give your paragraph:")
-
 if st.button("Extract"):
-    final_prompt = prompt.invoke(
-        {
-            "paragraph": para,
-            "format_instructions": parser.get_format_instructions()
-        }
-    )
 
-    response = model.invoke(final_prompt)
+    if paragraph.strip() == "":
+        st.warning("Please enter a movie paragraph.")
+    else:
 
-    st.write(response.content)
+        raw_response, movie = extract_movie_info(paragraph)
+
+        st.subheader("Raw LLM Response")
+        st.write(raw_response)
+
+        st.subheader("Structured Output")
+
+        st.json(movie.model_dump())
